@@ -1,0 +1,40 @@
+diabetes_data <- function(x) {
+  # Column selection
+  x %>%
+    select(rf_gdiab, mbstate_rec, mracehisp, wic, meduc, mbstate_rec, 
+           mracehisp, mhisp_r, mrace31, mager14, mrace15, m_ht_in, pwgt_r, 
+           rf_phype, rf_ghype, rf_ehype, mager, mager9, rf_inftr, rf_artec, 
+           dplural, ip_hepatb, ip_hepatc, bmi, bmi_r, rf_pdiab, urf_diab) -> GDM
+  
+  # Handling missing values
+  GDM[GDM == 'U'] <- NA
+  GDM[GDM == ''] <- NA
+  
+  # Filtering rows
+  GDM <- GDM[!(GDM$rf_pdiab == 'Y'), ]
+  GDM <- GDM[!(GDM$rf_gdiab == ''), ]
+  
+  # Additional filters
+  GDM <- GDM %>% filter(dplural < 2)
+  GDM <- GDM %>% filter(mager > 12)
+  
+  # Handling specific values
+  GDM$m_ht_in[GDM$m_ht_in == 99] <- NA
+  GDM$bmi[GDM$bmi == 99.9] <- NA
+  GDM$bmi_r[GDM$bmi_r == 9] <- NA
+  GDM$pwgt_r[GDM$pwgt_r == 999] <- NA
+  GDM$meduc[GDM$meduc == 9] <- NA
+  GDM$mbstate_rec[GDM$mbstate_rec == 3] <- NA
+  GDM$mhisp_r[GDM$mhisp_r == 9] <- NA
+  
+  # Dropping unused levels
+  GDM <- droplevels(GDM)
+  
+  # Creating categorical variables
+  GDM$weight <- cut(GDM$pwgt_r, breaks = c(74, 130, 150, 180, 375, Inf))
+  GDM$height <- cut(GDM$m_ht_in, breaks = c(29, 62, 64, 66, Inf))
+  
+  # Returning processed data
+  GDM_cleanr4__df <- GDM
+  return(GDM_cleanr4__df)
+}
