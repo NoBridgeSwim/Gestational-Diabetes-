@@ -228,6 +228,8 @@ k +
 
 \pagebreak
 
+
+
 # Display Figure 5
 q <- ggplot(data=na.omit(nonUSForest), aes(x =Year, y =OR, ymin =`2.5 %`, ymax =`97.5 %`)) +
     geom_pointrange(aes(col=Year)) +
@@ -244,6 +246,8 @@ q <- ggplot(data=na.omit(nonUSForest), aes(x =Year, y =OR, ymin =`2.5 %`, ymax =
           strip.text.x = element_text(size = 7, face='bold')) +
     coord_flip() +
     theme(legend.position = "right", legend.direction = "vertical")
+
+
 
 q + 
   scale_colour_manual(values = c('red', 'Purple', 'Blue','Black')) + 
