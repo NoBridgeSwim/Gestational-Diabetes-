@@ -1,0 +1,257 @@
+---
+title: "Final GDM code"
+author: "Patryk Piascik"
+date: "5/24/2020"
+output: pdf_document
+---
+
+```{r Load necessary libraries and functions, setup options, and read data, eval=TRUE, echo=FALSE, error=FALSE, message=FALSE, warning=FALSE, cache=TRUE, cache.lazy = FALSE, comment=FALSE, include=TRUE, results='hide'}
+# Load necessary libraries
+library(ggplot2)
+library(ggthemes)
+library(finalfit)
+library(knitr)
+library(kableExtra)
+library(forcats)
+library(reshape2)
+library(stringr)
+library(RColorBrewer)
+library(forestmangr)
+library(tidyverse)
+
+# Source custom functions
+source("~/desktop/functions/GDM_lablr_3.R")
+source("~/desktop/functions/GDM_glm_ref_na_GDM.R")
+source("~/desktop/functions/GDM_race_r.R")
+source("~/desktop/functions/GDM_cleanr4_.R")
+source("~/desktop/functions/GDM_1_0_.R")
+source('~/desktop/functions/OR_Nativity_all.R')
+source('~/desktop/functions/GDM_ref_na_Black__.R')
+source('~/desktop/functions/GDM_summary_Nativity.R')
+
+# Load data and tables
+graph.data <- readRDS(file='~/desktop/GDM_full(Histo).rds')
+table_split <- readRDS(file='~/desktop/generated tables/Table_split.rds')
+Table_split_race <- readRDS(file='~/desktop/generated tables/Table_split_split.rds')
+LogForestNat <- readRDS(file='~/desktop/generated tables/LogForestNat.rds')
+percent <- readRDS(file='~/desktop/generated tables/percent.rds')
+gdm <- readRDS(file='~/desktop/generated tables/gdm.rds')
+
+USForest <- readRDS(file='~/desktop/generated tables/USForest.rds')
+US_df_race <- readRDS(file='~/desktop/generated tables/US_df_race.rds')
+nonUSForest <- readRDS(file='~/desktop/generated tables/nonUSForest.rds')
+nonUS_df_race <- readRDS(file='~/desktop/generated tables/nonUS_df_race.rds')
+
+# Prepare and display Table 1
+graph.data$HepB.factor <- fct_explicit_na(graph.data$HepB.factor)
+graph.data$HepC.factor <- fct_explicit_na(graph.data$HepC.factor)
+graph.data$phype.factor <- fct_explicit_na(graph.data$phype.factor)
+graph.data$ghype.factor <- fct_explicit_na(graph.data$ghype.factor)
+graph.data$ehype.factor <- fct_explicit_na(graph.data$ehype.factor)
+graph.data$Infertility.factor <- fct_explicit_na(graph.data$Infertility.factor)
+graph.data$Education.factor <- fct_explicit_na(graph.data$Education.factor)
+graph.data$Hispanic.factor <- fct_explicit_na(graph.data$Hispanic.factor)
+
+explanatory <- c('Age.num','BMI.numeric', 'Education.factor','phype.factor','ehype.factor', 'ghype.factor','HepB.factor','HepC.factor','WIC.factor','Infertility.factor')
+dependent <- 'Nativity.factor'
+
+graph.data %>%
+  summary_factorlist(dependent, explanatory, 
+                     p=TRUE, add_dependent_label=TRUE, cont = 'median', cont_range = TRUE, p_cat = 'chisq',
+                     include_col_totals_percent = TRUE, col_totals_prefix = 'test') -> NativityTable
+
+kable(NativityTable, row.names=FALSE, align=c( "r", "r","r","r"), caption = 'Characteristics of 14,914,578 US-born and non-US-born women, NVS 2014 and 2017', booktabs=TRUE) %>% 
+  kable_styling(font_size=12) %>% 
+  add_footnote(c('')) %>% 
+  kable_styling(latex_options="scale_down")
+
+\pagebreak
+
+# Prepare and display Table 2
+explanatory <- c('Race_.factor', 'Hispanic.factor')
+dependent <- 'Nativity.factor'
+
+graph.data$Race_.factor <- fct_explicit_na(graph.data$Race_.factor)
+graph.data$Hispanic.factor <- fct_explicit_na(graph.data$Hispanic.factor)
+
+graph.data %>%
+  summary_factorlist(dependent, explanatory, 
+                     p=TRUE, add_dependent_label=TRUE, cont = 'median', cont_range = TRUE, p_cat = 'chisq',
+                     include_col_totals_percent = TRUE, col_totals_prefix = 'test') -> Race_Hispanic
+
+Race_Hispanic[1,1] <- 'Race'
+kable(Race_Hispanic, row.names=FALSE, align=c( "r", "r","r","r"), caption = 'Race and Hispanic origin by race, NVS 2014 and 2017', booktabs=TRUE) %>% 
+  kable_styling(font_size=12)
+
+\pagebreak
+
+# Display Table 3
+kable(percent, col.names = c('Year:','2014','2015','2016','2017'), row.names=FALSE, align=c( "r", "r","r","r"), caption = 'Percent of US-born and non-US born women from 2014-2017', booktabs=TRUE) %>% 
+  kable_styling(font_size=12)
+
+# Display Figure 1
+HistNativity <- ggplot(graph.data, aes(x=Year, fill=Nativity.factor, na.rm = TRUE)) +
+  geom_bar(position = 'fill', width = .4, na.rm = TRUE) +
+  scale_color_manual(values = c('blue','black', 'grey')) +
+  scale_fill_manual(values = c('blue','black', 'grey')) +
+  theme(text = element_text(size = 12, color = 'black'),
+        plot.title = element_text(color="black", size=12, hjust = .55),
+        axis.title.x = element_text(color="black", size=12),
+        axis.title.y = element_text(color="black", size=12), 
+        axis.text.x = element_text(color = "black", size = 12)) + 
+  theme(legend.position = "bottom", legend.direction = "horizontal") +
+  guides(fill=guide_legend(title=" "))
+
+HistNativity + 
+  geom_hline(aes(fill=Year),yintercept =.21, linetype=2, col='grey') + 
+  ylab('Proportion of mothers') + 
+  xlab('Year of birth') +
+  ggtitle('Figure 1. Among births in the US, the proportions of births to non-US-born women is increasing')
+
+\pagebreak
+
+# Display Table 4
+kable(gdm, col.names = c('Year:','2014','2015','2016','2017'), row.names=FALSE, align=c( "r", "r","r","r"), caption = 'Percent of US-born and non-US-born mothers with GDM from 2014-2017', booktabs=TRUE) %>% 
+  kable_styling(font_size=12) 
+
+
+\pagebreak
+
+# Display Figure 2
+graph.data$GDM.factor <- relevel(graph.data$GDM.factor, ref='No GDM')
+HistGDM_facet <- ggplot(drop_na(graph.data), aes(x=Nativity.factor, fill=GDM.factor, na.rm = TRUE)) +
+  geom_bar(position = 'fill', width = .5, na.rm = TRUE) + 
+  geom_hline(aes(fill=Year),yintercept =.041, linetype=2, col='white') +
+  geom_hline(aes(fill=Year), col='white',yintercept =.07, linetype=2) +
+  scale_color_manual(values = c('blue','black')) +
+  scale_fill_manual(values = c('blue','black')) + 
+  ylab('') +
+  xlab('') +
+  facet_wrap(~Year, nrow=1) +
+  theme(text = element_text(size = 12, face = 'bold', color = 'black'),
+        plot.title = element_text(color="black", size=12, face="bold", hjust = 0),
+        axis.title.x = element_text(color="black", size=12, face="bold"),
+        axis.title.y = element_text(color="black", size=12, face="bold"), 
+        axis.text.x = element_text(face="bold", color = "black", size = 12)) + 
+  theme(legend.position = "bottom", legend.direction = "horizontal") +
+  guides(fill=guide_legend(title="")) +
+  theme(aspect.ratio = 3/1)
+
+HistGDM_facet + 
+  theme(text = element_text(size = 12, face = 'bold', color = 'black')) + 
+  ylab('Proportion of mothers with GDM') + 
+  xlab(' ') +
+  ggtitle('Figure 2. The proportion of US-born and non-US born women with GDM is increasing')
+
+
+\pagebreak
+
+# Display Table 5
+LogForestNat$p <- NULL
+p <- rbind('<0.000','<0.000','<0.000','<0.000')
+LogForestNat <- cbind(LogForestNat, p)
+kable(LogForestNat, row.names=FALSE, align=c( "r", "r","r","r"), caption = 'Risk of GDM among non-US-born women compared to US-born women ', booktabs=TRUE) %>% 
+  kable_styling(font_size=12) %>% 
+  add_footnote(c(''))
+
+\pagebreak
+
+# Display Figure 3
+ForestNativity <- ggplot(data=LogForestNat, aes(x =Year, y =`Odds Ratio`, ymin =`2.5%CI`, ymax =`97.5%CI`)) +
+  geom_pointrange(aes(col=Year)) + 
+  geom_hline(aes(fill=Year), yintercept = 1, linetype=2) +
+  xlab('') +
+  ylab('') +
+  geom_errorbar(aes(ymin=`2.5%CI`, ymax=`97.5%CI`, col=Year), width=.8, cex=1) +
+  theme(plot.title=element_text(size=12, face="bold", hjust = 0.3),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        axis.text.x=element_text(color="black", size=12),
+        axis.title=element_text(color="black", size=15, face="bold"),
+        strip.text.y = element_text(hjust=0, vjust = 1, angle=180, face="bold")) +
+  coord_flip() +
+  theme(text = element_text(size = 12, color = 'black'),
+        legend.position = "bottom", legend.direction = "horizontal") +
+  guides(shape = guide_legend(reverse = TRUE, label.theme = element_text(angle=0)))
+
+ForestNativity + 
+  scale_colour_manual(values = c('red', 'Purple', 'Blue','Black')) + 
+  ggtitle('Figure 3. Non-US-born compared to US-born Risk Ratio (95% CI)') +
+  guides(col=guide_legend(title= '' )) + 
+  theme(legend.text=element_text(size=10))
+
+\pagebreak
+
+# Display Table 6
+kable(US_df_race, row.names=FALSE, align=c( "r", "r","r","r"), caption = 'Characteristics of US-born mothers by race and hispanic origin', booktabs=TRUE) %>% 
+  kable_styling(font_size=12) %>% 
+  add_footnote(c('')) %>% 
+  add_header_above(c('','2014'= 4,'2015'= 4,'2016'= 4,'2017'= 4)) %>% 
+  kable_styling(latex_options="scale_down")
+
+\pagebreak
+
+# Display Table 7
+kable(nonUS_df_race, row.names=FALSE, align=c( "r", "r","r","r"), caption = 'Characteristics of non-US-born mothers by race and hispanic origin', booktabs=TRUE) %>% 
+  kable_styling(font_size=12) %>% 
+  add_footnote(c('')) %>% 
+  add_header_above(c('','2014'= 4,'2015'= 4,'2016'= 4,'2017'= 4)) %>% 
+  kable_styling(latex_options="scale_down")
+
+
+\pagebreak
+# Display Figure 4
+k <- ggplot(data=na.omit(USForest), aes(x =Year, y =OR, ymin =`2.5 %`, ymax =`97.5 %`)) +
+    geom_pointrange(aes(col=Year)) +
+    geom_hline(aes(fill=Year), yintercept = 1, linetype=2) +
+    xlab('Race') +
+    geom_errorbar(aes(ymin=`2.5 %`, ymax=`97.5 %`,col=Year),width=0.5,cex=1) +
+    facet_wrap(~Race, strip.position="top", nrow=5, scales = "free_y") +
+    theme(plot.title=element_text(size=12, face="bold"),
+          axis.title.x=element_blank(),
+          axis.ticks.y=element_blank(),
+          axis.text.x=element_text(color="black", size=10),
+          axis.title=element_text(size=8, face="bold"),
+          strip.text.y = element_text(size =12, hjust=0, vjust = 1, angle=180, face="bold", colour = 'black'),
+          strip.text.x = element_text(size = 7, face='bold')) +
+    coord_flip() +
+    theme(legend.position = "right", legend.direction = "vertical")
+
+k + 
+  scale_colour_manual(values = c('red', 'Purple', 'Blue','Black')) + 
+  ylab(' ') + 
+  xlab('') + 
+  scale_y_continuous(breaks = c(1,1.5,2,2.5), limits=c(0.6,2.5)) +
+  guides(col=guide_legend(title="")) + 
+  theme(legend.text=element_text(size=8)) +
+  ggtitle('Figure 4. US-born Risk Ratio (95% CI) by race and hispanic origin')
+
+\pagebreak
+
+# Display Figure 5
+q <- ggplot(data=na.omit(nonUSForest), aes(x =Year, y =OR, ymin =`2.5 %`, ymax =`97.5 %`)) +
+    geom_pointrange(aes(col=Year)) +
+    geom_hline(aes(fill=Year), yintercept = 1, linetype=2) +
+    xlab('Race') +
+    geom_errorbar(aes(ymin=`2.5 %`, ymax=`97.5 %`,col=Year),width=0.5,cex=1) +
+    facet_wrap(~Race, strip.position="top", nrow=5, scales = "free_y") +
+    theme(plot.title=element_text(size=12, face="bold"),
+          axis.title.x=element_blank(),
+          axis.ticks.y=element_blank(),
+          axis.text.x=element_text(color="black", size=10),
+          axis.title=element_text(size=8, face="bold"),
+          strip.text.y = element_text(size =12, hjust=0, vjust = 1, angle=180, face="bold", colour = 'black'),
+          strip.text.x = element_text(size = 7, face='bold')) +
+    coord_flip() +
+    theme(legend.position = "right", legend.direction = "vertical")
+
+q + 
+  scale_colour_manual(values = c('red', 'Purple', 'Blue','Black')) + 
+  ylab(' ') + 
+  xlab('') + 
+  scale_y_continuous(breaks = c(1,1.5,2,2.5), limits=c(0.6,2.5)) +
+  guides(col=guide_legend(title=' ')) + 
+  theme(legend.text=element_text(size=8)) +
+  ggtitle('Figure 5. Non-US-born Risk Ratio (95% CI) by race and hispanic origin')
+
+
